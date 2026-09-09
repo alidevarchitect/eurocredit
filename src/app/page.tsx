@@ -1,69 +1,197 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  FileStack,
+  CheckCircle2,
+  UserCheck,
+  XCircle,
+  Timer,
+  ShieldCheck,
+  Download,
+  Play,
+  ArrowUpRight,
+  ShieldAlert,
+  Clock,
+  RefreshCw,
+} from "lucide-react";
+import { PageHeader, Card, CardHeader, KpiCard, Badge, Button } from "@/components/ui/primitives";
+import { ApplicationVolumeChart, ApprovalRateChart, HorizontalBarChart } from "@/components/charts";
+import { executiveKpis, applicationVolume, approvalRateTrend, riskDistribution } from "@/lib/data/dashboard";
+import { applications, formatEUR } from "@/lib/data/applications";
+import { operationalAlerts } from "@/lib/data/alerts";
 
-export default function Home() {
+const kpiIcons = [FileStack, CheckCircle2, UserCheck, XCircle, Timer, ShieldCheck];
+
+const toneIcon = { red: ShieldAlert, amber: Clock, mint: CheckCircle2, blue: RefreshCw };
+const toneColor: Record<string, string> = {
+  red: "text-[var(--red)] bg-[var(--red-dim)]",
+  amber: "text-[var(--amber)] bg-[var(--amber-dim)]",
+  mint: "text-[var(--mint)] bg-[var(--mint-dim)]",
+  blue: "text-[var(--blue)] bg-[var(--blue-dim)]",
+};
+
+const decisionBadge: Record<string, { tone: "mint" | "amber" | "red" | "blue"; label: string }> = {
+  new: { tone: "amber", label: "New" },
+  ai_review: { tone: "blue", label: "AI Review" },
+  manual_review: { tone: "amber", label: "Manual Review" },
+  approved: { tone: "mint", label: "Approved" },
+  rejected: { tone: "red", label: "Rejected" },
+  disbursed: { tone: "mint", label: "Disbursed" },
+};
+
+const statusLabel: Record<string, string> = {
+  new: "New application",
+  ai_review: "AI review",
+  manual_review: "Referred",
+  approved: "Approved",
+  rejected: "Declined",
+  disbursed: "Funded",
+};
+
+export default function ExecutiveDashboardPage() {
+  const highRisk = [...applications].sort((a, b) => a.riskScore - b.riskScore).slice(0, 5);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <div>
+      <PageHeader
+        eyebrow="Operations control tower"
+        title="Executive command center"
+        description="A real-time control tower that unifies application throughput, approval mix, portfolio signals, manual review load and automation health in one executive view."
+        action={
+          <>
+            <Button variant="secondary">
+              <Download size={14} /> Export
+            </Button>
+            <Link href="/workflow-designer">
+              <Button variant="primary">
+                <Play size={13} /> Run demo flow
+              </Button>
+            </Link>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
+        {executiveKpis.map((kpi, i) => {
+          const Icon = kpiIcons[i];
+          return <KpiCard key={kpi.label} {...kpi} icon={<Icon size={14} />} />;
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
+        <Card className="xl:col-span-2">
+          <CardHeader
+            title="Application volume"
+            sub="Monthly submissions by decision outcome"
+            action={
+              <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)] mono">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[var(--mint)]" />Approved</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[var(--amber)]" />Review</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[var(--red)]" />Rejected</span>
+              </div>
+            }
+          />
+          <ApplicationVolumeChart data={applicationVolume} />
+        </Card>
+        <Card>
+          <CardHeader title="Approval rate" sub="Share of applications approved, trailing 12m" />
+          <ApprovalRateChart data={approvalRateTrend} />
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
+        <Card>
+          <CardHeader title="Risk distribution" sub="Outstanding exposure by rating band (€M)" />
+          <HorizontalBarChart
+            data={riskDistribution}
+            dataKey="exposure"
+            labelKey="band"
+            colorByTone={{}}
+            color="var(--mint)"
+          />
+        </Card>
+
+        <Card className="xl:col-span-2" padded={false}>
+          <div className="p-5 pb-3 flex items-center justify-between">
+            <CardHeader
+              title="Recent high-risk applications"
+              sub="Score ≤ 70 · ordered by ascending risk score"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <Link href="/applications" className="text-[11.5px] text-[var(--mint)] hover:underline flex items-center gap-1 shrink-0 -mt-4">
+              View all <ArrowUpRight size={12} />
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12.5px]">
+              <thead>
+                <tr className="text-left text-[var(--text-faint)] border-y border-[var(--border)]">
+                  <th className="font-medium py-2 px-5">Borrower</th>
+                  <th className="font-medium py-2 px-3">Amount</th>
+                  <th className="font-medium py-2 px-3">Risk score</th>
+                  <th className="font-medium py-2 px-3">PD (12m)</th>
+                  <th className="font-medium py-2 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {highRisk.map((a) => (
+                  <tr key={a.id} className="border-b border-[var(--border)] last:border-0">
+                    <td className="py-2.5 px-5">
+                      <div className="font-medium text-[var(--text)]">{a.borrower}</div>
+                      <div className="text-[11px] text-[var(--text-faint)] mono">{a.appId} · {a.sector}</div>
+                    </td>
+                    <td className="py-2.5 px-3 tabular">{formatEUR(a.amount)}</td>
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-14 rounded-full bg-[var(--surface-3)] overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${a.riskScore}%`, background: a.riskScore < 55 ? "var(--red)" : "var(--amber)" }}
+                          />
+                        </div>
+                        <span className="tabular">{a.riskScore}</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3 tabular">{a.pd.toFixed(1)}%</td>
+                    <td className="py-2.5 px-3">
+                      <Badge tone={decisionBadge[a.stage].tone}>{statusLabel[a.stage]}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+
+      <Card padded={false}>
+        <div className="p-5 pb-3 flex items-center justify-between">
+          <CardHeader title="Operational alerts" sub="System health, risk & SLA signals" />
+          <Badge tone="red">{operationalAlerts.length} open</Badge>
         </div>
-      </main>
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 divide-[var(--border)]">
+          {operationalAlerts.map((alert, i) => {
+            const Icon = toneIcon[alert.tone];
+            return (
+              <div
+                key={i}
+                className={`flex gap-3 px-5 py-3 ${i % 2 === 0 ? "md:border-r md:border-[var(--border)]" : ""} ${
+                  i < operationalAlerts.length - 2 ? "md:border-b md:border-[var(--border)]" : ""
+                }`}
+              >
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${toneColor[alert.tone]}`}>
+                  <Icon size={13} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[12.5px] font-medium text-[var(--text)]">{alert.title}</div>
+                    <span className="text-[10.5px] text-[var(--text-faint)] mono shrink-0">{alert.time}</span>
+                  </div>
+                  <div className="text-[11.5px] text-[var(--text-muted)] mt-0.5 leading-snug">{alert.detail}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
     </div>
   );
 }
